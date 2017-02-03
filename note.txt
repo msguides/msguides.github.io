@@ -1,0 +1,97 @@
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+RewriteCond %{QUERY_STRING} fb_action_ids=.*$
+RewriteRule .* %{REQUEST_URI}? [R=301,L]
+RewriteCond %{QUERY_STRING} fb_comment_id=.*$
+RewriteRule .* %{REQUEST_URI}? [R=301,L]
+
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+
+# END WordPress
+
+------------------------------------------------------------------------------------------------------
+
+server {
+    	listen  <%= ENV['OPENSHIFT_PHP_IP'] %>:<%= ENV['OPENSHIFT_PHP_PORT'] %>;
+		root    <%= ENV['OPENSHIFT_REPO_DIR'] %>/public;
+		
+	location / {
+		
+		if ($http_host != "msguides.com") {return 403;}
+		
+		if ($args ~ "fb_action_ids=.*$") {
+			set $rule_0 1$rule_0;
+		}
+		if ($rule_0 = "1"){
+			rewrite .* $uri? permanent;
+		}
+		if ($args ~ "fb_comment_id=.*$") {
+			set $rule_1 1$rule_1;
+		}
+		if ($rule_1 = "1") {
+			rewrite .* $uri? permanent;
+		}
+		
+        	index index.php  index.html index.htm;
+			try_files $uri $uri/ /index.php?q=$uri&$args;
+    	}
+	
+	# pass the PHP scripts to PHP-FPM
+	location ~ \.php$ {
+    		fastcgi_pass unix:<%= ENV['OPENSHIFT_PHP_SOCKET'] %>;
+    		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    		fastcgi_param PATH_INFO $fastcgi_script_name;
+    		include <%= ENV['OPENSHIFT_PHP_DIR'] %>/usr/conf/fastcgi_params;
+	}
+}
+
+server {
+    	listen  <%= ENV['OPENSHIFT_PHP_IP'] %>:<%= ENV['OPENSHIFT_PHP_PORT'] %>;
+		server_name get.msguides.com;
+		return 301 $scheme://msguides.com$request_uri;
+}
+
+server {
+    	listen  <%= ENV['OPENSHIFT_PHP_IP'] %>:<%= ENV['OPENSHIFT_PHP_PORT'] %>;
+		server_name donate.msguides.com;
+		root    <%= ENV['OPENSHIFT_REPO_DIR'] %>/public/donate.msguides.com;
+		
+    	location / {
+        	index index.php  index.html index.htm;
+			try_files $uri $uri/ /index.php?q=$uri&$args;
+    	}
+	
+	# pass the PHP scripts to PHP-FPM
+	location ~ \.php$ {
+    		fastcgi_pass unix:<%= ENV['OPENSHIFT_PHP_SOCKET'] %>;
+    		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    		fastcgi_param PATH_INFO $fastcgi_script_name;
+    		include <%= ENV['OPENSHIFT_PHP_DIR'] %>/usr/conf/fastcgi_params;
+	}
+}
+
+server {
+    	listen  <%= ENV['OPENSHIFT_PHP_IP'] %>:<%= ENV['OPENSHIFT_PHP_PORT'] %>;
+		server_name proxy.msguides.com;
+		root    <%= ENV['OPENSHIFT_REPO_DIR'] %>/public/miniproxy;
+		
+    	location / {
+        	index index.php  index.html index.htm;
+			try_files $uri $uri/ /index.php?q=$uri&$args;
+    	}
+	
+	# pass the PHP scripts to PHP-FPM
+	location ~ \.php$ {
+    		fastcgi_pass unix:<%= ENV['OPENSHIFT_PHP_SOCKET'] %>;
+    		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    		fastcgi_param PATH_INFO $fastcgi_script_name;
+    		include <%= ENV['OPENSHIFT_PHP_DIR'] %>/usr/conf/fastcgi_params;
+	}
+}
